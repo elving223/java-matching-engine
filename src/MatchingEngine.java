@@ -46,6 +46,40 @@ public class MatchingEngine {
         });
     }
 
+    public void matchOrders() {
+        while (!buyOrders.isEmpty() && !sellOrders.isEmpty()) {
+
+            Order bestBuy = buyOrders.get(0);
+            Order bestSell = sellOrders.get(0);
+
+            if (bestBuy.price >= bestSell.price) {
+
+                int tradeQuantity = Math.min(bestBuy.quantity, bestSell.quantity);
+                int tradePrice = bestSell.price;
+
+                System.out.println("TRADE EXECUTED:");
+                System.out.println("Buy Order ID: " + bestBuy.orderId +
+                        ", Sell Order ID: " + bestSell.orderId +
+                        ", Price: " + tradePrice +
+                        ", Quantity: " + tradeQuantity);
+
+                bestBuy.quantity -= tradeQuantity;
+                bestSell.quantity -= tradeQuantity;
+
+                if (bestBuy.quantity == 0) {
+                    buyOrders.remove(0);
+                }
+
+                if (bestSell.quantity == 0) {
+                    sellOrders.remove(0);
+                }
+
+            } else {
+                break;
+            }
+        }
+    }
+
     public void printOrderBook() {
         System.out.println("BUY ORDERS:");
         for (Order order : buyOrders) {

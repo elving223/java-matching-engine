@@ -4,8 +4,10 @@ public class Order {
     int price;
     int quantity;
     long timestamp;
+    int orderId;
 
-    public Order(String side, int price, int quantity, long timestamp) {
+    public Order(int orderId, String side, int price, int quantity, long timestamp) {
+        this.orderId = orderId;
         this.side = side;
         this.price = price;
         this.quantity = quantity;
@@ -14,7 +16,8 @@ public class Order {
 
     public void printOrder() {
         System.out.println(
-                "Side: " + side +
+                "Order ID: " + orderId +
+                        ", Side: " + side +
                         ", Price: " + price +
                         ", Quantity: " + quantity +
                         ", Timestamp: " + timestamp
