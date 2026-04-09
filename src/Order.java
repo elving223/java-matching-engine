@@ -1,12 +1,12 @@
 public class Order {
 
     String side;
-    int price;
+    float price;
     int quantity;
     long timestamp;
     int orderId;
 
-    public Order(int orderId, String side, int price, int quantity, long timestamp) {
+    public Order(int orderId, String side, float price, int quantity, long timestamp) {
         this.orderId = orderId;
         this.side = side;
         this.price = price;

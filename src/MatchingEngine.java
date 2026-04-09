@@ -1,94 +1,127 @@
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.TreeMap;
 
 public class MatchingEngine {
 
-    ArrayList<Order> buyOrders;
-    ArrayList<Order> sellOrders;
+    TreeMap<Float, LinkedList<Order>> buyBook;
+    TreeMap<Float, LinkedList<Order>> sellBook;
+    int nextOrderId;
 
     public MatchingEngine() {
-        buyOrders = new ArrayList<>();
-        sellOrders = new ArrayList<>();
+        buyBook = new TreeMap<>();
+        sellBook = new TreeMap<>();
+        nextOrderId = 1;
     }
 
     public void addOrder(Order order) {
         if (order.side.equals("BUY")) {
-            buyOrders.add(order);
-            sortBuyOrders();
+            buyBook.putIfAbsent(order.price, new LinkedList<>());
+            buyBook.get(order.price).add(order);
         } else if (order.side.equals("SELL")) {
-            sellOrders.add(order);
-            sortSellOrders();
+            sellBook.putIfAbsent(order.price, new LinkedList<>());
+            sellBook.get(order.price).add(order);
         }
     }
 
-    public void sortBuyOrders() {
-        Collections.sort(buyOrders, new Comparator<Order>() {
-            @Override
-            public int compare(Order o1, Order o2) {
-                if (o1.price != o2.price) {
-                    return o2.price - o1.price;
+    public void executeIncomingOrder(float price, int quantity, Boolean buyOrder) {
+
+        long currentTime = System.currentTimeMillis();
+
+        if (buyOrder) {
+            while (quantity > 0 && !sellBook.isEmpty()) {
+                float bestSellPrice = sellBook.firstKey();
+
+                if (bestSellPrice > price) {
+                    break;
                 }
-                return Long.compare(o1.timestamp, o2.timestamp);
-            }
-        });
-    }
 
-    public void sortSellOrders() {
-        Collections.sort(sellOrders, new Comparator<Order>() {
-            @Override
-            public int compare(Order o1, Order o2) {
-                if (o1.price != o2.price) {
-                    return o1.price - o2.price;
-                }
-                return Long.compare(o1.timestamp, o2.timestamp);
-            }
-        });
-    }
+                LinkedList<Order> sellOrdersAtPrice = sellBook.get(bestSellPrice);
+                Order restingSell = sellOrdersAtPrice.getFirst();
 
-    public void matchOrders() {
-        while (!buyOrders.isEmpty() && !sellOrders.isEmpty()) {
-
-            Order bestBuy = buyOrders.get(0);
-            Order bestSell = sellOrders.get(0);
-
-            if (bestBuy.price >= bestSell.price) {
-
-                int tradeQuantity = Math.min(bestBuy.quantity, bestSell.quantity);
-                int tradePrice = bestSell.price;
+                int tradeQuantity = Math.min(quantity, restingSell.quantity);
 
                 System.out.println("TRADE EXECUTED:");
-                System.out.println("Buy Order ID: " + bestBuy.orderId +
-                        ", Sell Order ID: " + bestSell.orderId +
-                        ", Price: " + tradePrice +
+                System.out.println("Incoming BUY matched with Sell Order ID: " + restingSell.orderId +
+                        ", Price: " + bestSellPrice +
                         ", Quantity: " + tradeQuantity);
 
-                bestBuy.quantity -= tradeQuantity;
-                bestSell.quantity -= tradeQuantity;
+                quantity -= tradeQuantity;
+                restingSell.quantity -= tradeQuantity;
 
-                if (bestBuy.quantity == 0) {
-                    buyOrders.remove(0);
+                if (restingSell.quantity == 0) {
+                    sellOrdersAtPrice.removeFirst();
                 }
 
-                if (bestSell.quantity == 0) {
-                    sellOrders.remove(0);
+                if (sellOrdersAtPrice.isEmpty()) {
+                    sellBook.remove(bestSellPrice);
+                }
+            }
+
+            if (quantity > 0) {
+                Order remainingBuy = new Order(nextOrderId++, "BUY", price, quantity, currentTime);
+                addOrder(remainingBuy);
+
+                System.out.println("Remaining BUY added to book:");
+                remainingBuy.printOrder();
+            }
+
+        } else {
+            while (quantity > 0 && !buyBook.isEmpty()) {
+                float bestBuyPrice = buyBook.lastKey();
+
+                if (bestBuyPrice < price) {
+                    break;
                 }
 
-            } else {
-                break;
+                LinkedList<Order> buyOrdersAtPrice = buyBook.get(bestBuyPrice);
+                Order restingBuy = buyOrdersAtPrice.getFirst();
+
+                int tradeQuantity = Math.min(quantity, restingBuy.quantity);
+
+                System.out.println("TRADE EXECUTED:");
+                System.out.println("Incoming SELL matched with Buy Order ID: " + restingBuy.orderId +
+                        ", Price: " + bestBuyPrice +
+                        ", Quantity: " + tradeQuantity);
+
+                quantity -= tradeQuantity;
+                restingBuy.quantity -= tradeQuantity;
+
+                if (restingBuy.quantity == 0) {
+                    buyOrdersAtPrice.removeFirst();
+                }
+
+                if (buyOrdersAtPrice.isEmpty()) {
+                    buyBook.remove(bestBuyPrice);
+                }
+            }
+
+            if (quantity > 0) {
+                Order remainingSell = new Order(nextOrderId++, "SELL", price, quantity, currentTime);
+                addOrder(remainingSell);
+
+                System.out.println("Remaining SELL added to book:");
+                remainingSell.printOrder();
             }
         }
     }
 
     public void printOrderBook() {
         System.out.println("BUY ORDERS:");
-        for (Order order : buyOrders) {
-            order.printOrder();
+
+        for (Float price : buyBook.descendingKeySet()) {
+            LinkedList<Order> ordersAtPrice = buyBook.get(price);
+            for (Order order : ordersAtPrice) {
+                order.printOrder();
+            }
         }
 
         System.out.println("SELL ORDERS:");
-        for (Order order : sellOrders) {
-            order.printOrder();
+
+        for (Float price : sellBook.keySet()) {
+            LinkedList<Order> ordersAtPrice = sellBook.get(price);
+            for (Order order : ordersAtPrice) {
+                order.printOrder();
+            }
         }
     }
 }
