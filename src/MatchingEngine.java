@@ -10,7 +10,7 @@ public class MatchingEngine {
     public MatchingEngine() {
         buyBook = new TreeMap<>();
         sellBook = new TreeMap<>();
-        nextOrderId = 1;
+        nextOrderId = 5;
     }
 
     public void addOrder(Order order) {
